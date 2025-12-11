@@ -1,15 +1,15 @@
 <div style="padding: 20px">
   <h1>Animation Angular</h1>
-  <button mat-raised-button color="accent">Animer une fois</button>
-  <button mat-raised-button color="accent">Animer en boucle</button>
-  <div class="square" style="background-color: red;"></div>
+  <button mat-raised-button color="accent" (click)="animate()">Animer une fois</button>
+  <button mat-raised-button color="accent" (click)="ToggleAnimate()">Animer en boucle</button>
+  <div [@shake]="red" class="square" style="background-color: red;"></div>
 
-  <div class="square" style="background-color: green;"></div>
+  <div [@bounce]="green" class="square" style="background-color: green;"></div>
 
-  <div class="square" style="background-color: blue;"></div>
+  <div [@tada]="blue" class="square" style="background-color: blue;"></div>
 </div>
 <div style="padding: 20px">
   <h1>Animation CSS</h1>
-  <button mat-raised-button color="accent">Faire tourner</button>
-  <div class="square" style="background-color:orange;"></div>
+  <button mat-raised-button color="accent" (click)="Rotate()">Faire tourner</button>
+  <div [class.rotate-left]="rotate" class="square" style="background-color:orange;"></div>
 </div>
