@@ -26,10 +26,13 @@ public class MathBackgroundService : BackgroundService
 
     private MathQuestionsService _mathQuestionsService;
 
-    public MathBackgroundService(IHubContext<MathQuestionsHub> mathQuestionHub, MathQuestionsService mathQuestionsService)
+    private IServiceScopeFactory _serviceScopeFactory;
+
+    public MathBackgroundService(IHubContext<MathQuestionsHub> mathQuestionHub, MathQuestionsService mathQuestionsService, IServiceScopeFactory serviceScopeFactory)
     {
         _mathQuestionHub = mathQuestionHub;
         _mathQuestionsService = mathQuestionsService;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
     public void AddUser(string userId)
@@ -66,10 +69,22 @@ public class MathBackgroundService : BackgroundService
         _currentQuestion.PlayerChoices[choice]++;
 
         // TODO: Notifier les clients qu'un joueur a choisi une réponse
+        await _mathQuestionHub.Clients.All.SendAsync("IncreasePlayersChoices", choice);
     }
 
     private async Task EvaluateChoices()
     {
+        using (IServiceScope scope = _serviceScopeFactory.CreateScope())
+        {
+            BackgroundServiceContext dbContext = scope.ServiceProvider.GetRequiredService<BackgroundServiceContext>();
+
+            // On peut maintenant utiliser le dbContext normalement
+            // On peut également faire un SaveChanges
+
+            int rightAnswer = _currentQuestion.Answers[_currentQuestion.RightAnswerIndex];
+        
+
+
         // TODO: La méthode va avoir besoin d'un scope
         foreach (var userId in _data.Keys)
         {
@@ -78,17 +93,24 @@ public class MathBackgroundService : BackgroundService
             // TODO: Modifier et sauvegarder le NbRightAnswers des joueurs qui ont la bonne réponse
             if (userData.Choice == _currentQuestion!.RightAnswerIndex)
             {
+                    Player player = await dbContext.Player.Where(p => p.UserId == userId).SingleAsync();
+                    player.NbRightAnswers++;
 
+                    await _mathQuestionHub.Clients.User(userId).SendAsync("RightAnswer");
             }
             else
             {
-            }
+                    await _mathQuestionHub.Clients.User(userId).SendAsync("WrongAnswer", rightAnswer);
+                }
 
         }
+
+            await dbContext.SaveChangesAsync();
         // Reset
         foreach (var key in _data.Keys)
         {
             _data[key].Choice = -1;
+        }
         }
     }
 
