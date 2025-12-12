@@ -26,10 +26,13 @@ public class MathBackgroundService : BackgroundService
 
     private MathQuestionsService _mathQuestionsService;
 
-    public MathBackgroundService(IHubContext<MathQuestionsHub> mathQuestionHub, MathQuestionsService mathQuestionsService)
+    private IServiceScopeFactory _serviceScopeFactory;
+
+    public MathBackgroundService(IHubContext<MathQuestionsHub> mathQuestionHub, MathQuestionsService mathQuestionsService, IServiceScopeFactory serviceScopeFactory)
     {
         _mathQuestionHub = mathQuestionHub;
         _mathQuestionsService = mathQuestionsService;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
     public void AddUser(string userId)
@@ -65,26 +68,40 @@ public class MathBackgroundService : BackgroundService
 
         _currentQuestion.PlayerChoices[choice]++;
 
-        // TODO: Notifier les clients qu'un joueur a choisi une réponse
+        // Notifier les clients qu'un joueur a choisi une réponse
+        await _mathQuestionHub.Clients.All.SendAsync("IncreasePlayersChoices", choice);
     }
 
     private async Task EvaluateChoices()
     {
-        // TODO: La méthode va avoir besoin d'un scope
+        using var scope = _serviceScopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<BackgroundServiceContext>();
+
+        int rightAnswer = _currentQuestion!.Answers[_currentQuestion.RightAnswerIndex];
+
         foreach (var userId in _data.Keys)
         {
             var userData = _data[userId];
-            // TODO: Notifier les clients pour les bonnes et mauvaises réponses
-            // TODO: Modifier et sauvegarder le NbRightAnswers des joueurs qui ont la bonne réponse
+            
             if (userData.Choice == _currentQuestion!.RightAnswerIndex)
             {
+                // Notifier le client qu'il a eu la bonne réponse
+                await _mathQuestionHub.Clients.User(userId).SendAsync("RightAnswer");
 
+                // Mettre à jour le nombre de bonnes réponses dans la BD
+                var player = await context.Player.Where(p => p.UserId == userId).SingleAsync();
+                player.NbRightAnswers++;
             }
             else
             {
+                // Notifier le client qu'il a eu la mauvaise réponse avec la bonne réponse
+                await _mathQuestionHub.Clients.User(userId).SendAsync("WrongAnswer", rightAnswer);
             }
-
         }
+
+        // Sauvegarder les changements dans la BD
+        await context.SaveChangesAsync();
+
         // Reset
         foreach (var key in _data.Keys)
         {
