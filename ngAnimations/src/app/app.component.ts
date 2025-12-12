@@ -7,9 +7,9 @@ import { lastValueFrom, timer } from 'rxjs';
     selector: 'app-root',
     templateUrl: './app.component.html',
     animations:[
-      trigger("shake", [transition(":increment", useAnimation(shake))]),
-      trigger("bounce", [transition(":increment", useAnimation(bounce))]),
-      trigger("tada", [transition(":increment", useAnimation(tada))]),
+      trigger("shake", [transition(":increment", useAnimation(shake, {params: {timing: 2}}))]),
+      trigger("bounce", [transition(":increment", useAnimation(bounce, {params: {timing: 4}}))]),
+      trigger("tada", [transition(":increment", useAnimation(tada, {params: {timing: 3}}))]),
     ],
     styleUrls: ['./app.component.css'],
     standalone: true
